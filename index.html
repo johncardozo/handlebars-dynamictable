@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Handlebars Table Example</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/tomorrow.css">
+    <link rel="stylesheet" href="css/example.css">
+</head>
+
+<body class="bg-light">
+    <div class="container">
+        <div class="row">
+            <h1>Handlebars Dynamic Table</h1>
+        </div>
+        <div class="row principal">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        New movie
+                    </div>
+                    <div class="card-body">
+                        <form action="">
+                            <div class="form-group">
+                                <label for="titleText">Title</label>
+                                <input type="text" id="titleText" class="form-control form-control-sm">
+                            </div>
+                            <div class="form-group">
+                                <label for="yearText">Year</label>
+                                <input type="text" id="yearText" class="form-control form-control-sm">
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-info" id="buttonAdd">Add Movie</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <button type="button" class="btn btn-info" id="buttonSend">Send data to server</button>
+                <table class="table table-bordered table-hover table-sm">
+                    <thead>
+                        <tr class="table-info">
+                            <th>Title</th>
+                            <th>Year</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="jsonModal" class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Json code to be send to server</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pre><code id="jsonArea" class="json"></code></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" data-delay="5000">
+        <div class="toast-body" data-dismiss="toast">
+        The movie has been deleted!            
+        </div>
+    </div>
+
+    <script id="tbody-template" type="text/x-handlebars-template">
+    {{#each movies}}
+    <tr class="bg-white">
+        <td class="align-middle">{{title}}</td>
+        <td class="align-middle">{{year}}</td>
+        <td class="align-middle">
+            <button type="button" class="btn btn-xs btn-danger btn-remove" data-index="{{@index}}">x</button>
+        </td>
+    </tr>   
+    {{/each}} 
+    </script>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/handlebars.js"></script>
+    <script src="js/highlight.pack.js"></script>
+
+    <script>
+
+        $(document).ready(function () {
+
+            // Define data in JSON format.  
+            var context = {
+                "movies": [
+                    { "id": guid(), "title": "Pulp Fiction", "year": 1994 },    
+                    { "id": guid(), "title": "Inglourious Basterds", "year": 2009 },
+                    { "id": guid(), "title": "Django Unchained", "year": 2012 }
+                ]
+            };
+
+            /* Renders the template */
+            let render = () => {
+                // Retrieve the template data from the HTML (jQuery is used here).  
+                var template = $('#tbody-template').html();
+                // Compile the template data into a function  
+                var templateScript = Handlebars.compile(template);
+
+                // Pass Data to template script.  
+                var html = templateScript(context);
+                // Get HTML element
+                let tbody = $('tbody');
+                // Remove all HTML element children
+                tbody.empty();
+                // Insert the HTML code into the page 
+                tbody.append(html);
+                // Show current movies array in console
+                console.log(context.movies)
+            };
+
+            /* Click on add movie button */
+            $('#buttonAdd').on('click', function () {
+                // Get new movie data
+                let title = $('#titleText').val();
+                let year = $('#yearText').val();
+
+                // Create an object
+                new_movie = {
+                    'id': guid(),
+                    'title': title,
+                    'year': parseInt(year),
+                };
+
+                // Append the new movie to context array
+                context.movies.push(new_movie);
+
+                $('#titleText').val('');
+                $('#yearText').val('');
+
+                // Render the table
+                render();
+            });
+
+            /* Click on a delete movie button */
+            $(document).on('click', '.btn-remove', function () {
+                // Get button id
+                let index = $(this).attr('data-index');
+
+                // Remove element from movies array
+                context.movies.splice(index, 1);
+
+                // Render the table
+                render();
+
+                // Show a toast as a deletio message
+                $('.toast').toast('show');
+            });
+
+            /* Generate a guid */
+            function guid() {
+                function s4() {
+                    return Math.floor((1 + Math.random()) * 0x10000)
+                        .toString(16)
+                        .substring(1);
+                }
+                return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+                    s4() + '-' + s4() + s4() + s4();
+            }
+
+            $('#buttonSend').on('click', function(){
+                // Transform JSON to TEXT
+                let textedJson = JSON.stringify(context.movies, undefined, 4);
+                
+                // Write text into JSON area
+                $('#jsonArea').text(textedJson);
+                
+                // Format JSON code to show in modal
+                document.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightBlock(block);
+                });
+
+                // Show modal
+                $('#jsonModal').modal('show');
+            });
+
+            // Render the table
+            render();
+        });
+    </script>
+
+</body>
+
+</html>
